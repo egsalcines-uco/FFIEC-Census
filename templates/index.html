@@ -374,6 +374,53 @@
             "Error al llamar a /api/ffiec-test:\n" + err;
         }
       });
+
+      // === FUNCIÓN DE PRUEBA DIRECTA FFIEC (VIEW/AGGREGATE - JSON) ===
+      const btnTestDirect = document.createElement("button");
+      btnTestDirect.textContent = "Probar FFIEC Directo (JSON)";
+      btnTestDirect.style = "width:100%; margin-top: 10px; background: #047857;"; // Un color distinto
+      document.querySelector(".panel-left").appendChild(btnTestDirect);
+      
+      const directTestOut = document.createElement("div");
+      directTestOut.id = "ffiec-test-output-direct";
+      directTestOut.style = "margin-top: 8px; font-size: 12px; white-space: pre-wrap; color: #047857;";
+      document.querySelector(".panel-left").appendChild(directTestOut);
+
+
+      btnTestDirect.addEventListener("click", async () => {
+        const testOutEl = document.getElementById("ffiec-test-output-direct");
+        testOutEl.textContent = "Llamando a FFIEC directamente...";
+        testOutEl.style.color = "#047857";
+
+        // URL para datos agregados (JSON)
+        const URL_AGGREGATE = "https://ffiec.cfpb.gov/v2/data-browser-api/view/aggregate?years=2023&msamds=11244&actions_taken=1%2C2%2C3&leis=AD6GFRVSDT01YPT1CS68";
+
+        try {
+          // La llamada Fetch NO necesita los headers complejos (User-Agent, Referer) 
+          // que necesitaste en Python, porque el navegador los añade automáticamente.
+          const resp = await fetch(URL_AGGREGATE);
+
+          if (!resp.ok) {
+            // Maneja errores de red o HTTP (como 404 o 500)
+            throw new Error(`Error HTTP: ${resp.status}`);
+          }
+
+          const data = await resp.json();
+          
+          testOutEl.textContent = 
+            `Status: ${resp.status} (OK)\n` +
+            `Registros Totales: ${data.totalEntries || 'N/A'}\n` +
+            `Campos de Reporte: ${Object.keys(data.report.fields).length}\n\n` +
+            `Primer registro de datos:\n` +
+            JSON.stringify(data.report.rows[0], null, 2).slice(0, 300) + '...';
+
+        } catch (err) {
+          testOutEl.textContent =
+            "Error al llamar directamente a FFIEC:\n" + err.message;
+          testOutEl.style.color = "red";
+          console.error(err);
+        }
+      });
     </script>
   </body>
 </html>
