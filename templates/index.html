@@ -203,7 +203,7 @@
         <div id="loading" style="display:none">Consultando HMDA...</div>
         <div id="error"></div>
 
-        <!-- Botón de prueba directa a la API FFIEC -->
+        <!-- Botón de prueba FFIEC (via backend) -->
         <hr style="margin:16px 0;" />
         <button id="btn-test-ffiec" style="width:100%;">Probar API FFIEC (view/filers)</button>
         <div id="ffiec-test-output"></div>
@@ -347,34 +347,43 @@
         }
       });
 
-      // === Botón de prueba directa a la API FFIEC ===
+      // === Botón de prueba FFIEC, pero llamando a tu backend (/api/ffiec-test) ===
       const btnTest = document.getElementById("btn-test-ffiec");
       const testOut = document.getElementById("ffiec-test-output");
 
       btnTest.addEventListener("click", async () => {
-        testOut.textContent = "Llamando a FFIEC /view/filers...";
-        const testUrl = "https://ffiec.cfpb.gov/v2/data-browser-api/view/filers?years=2023&msamds=11244";
+        testOut.textContent = "Llamando a /api/ffiec-test (backend Flask)...";
 
         try {
-          const resp = await fetch(testUrl);
-          testOut.textContent = `Status: ${resp.status} ${resp.statusText}\nURL: ${testUrl}\n`;
+          const resp = await fetch("/api/ffiec-test");
+          const data = await resp.json().catch(() => null);
 
-          if (!resp.ok) {
-            testOut.textContent += "La respuesta no es OK (puede ser 403/404/etc).";
+          if (!data) {
+            testOut.textContent = "Respuesta inválida del backend (JSON nulo).";
             return;
           }
 
-          const json = await resp.json();
-          const n = (json && Array.isArray(json.institutions)) ? json.institutions.length : 0;
-          testOut.textContent += `\nInstitutions devueltas: ${n}\n\nPrimeros nombres:\n`;
+          if (!data.success) {
+            testOut.textContent =
+              "Error en backend:\n" + (data.error || "Desconocido");
+            return;
+          }
+
+          const n = data.institutions ? data.institutions.length : 0;
+          testOut.textContent =
+            `Status: ${data.status}\n` +
+            `URL: ${data.url}\n` +
+            `Institutions devueltas: ${n}\n\nPrimeros nombres:\n`;
+
           if (n > 0) {
-            json.institutions.slice(0, 5).forEach((inst, i) => {
-              testOut.textContent += `${i+1}. ${inst.name} (LEI: ${inst.lei})\n`;
+            data.institutions.slice(0, 5).forEach((inst, i) => {
+              testOut.textContent += `${i + 1}. ${inst.name} (LEI: ${inst.lei})\n`;
             });
           }
         } catch (err) {
           console.error(err);
-          testOut.textContent = "Error de red o CORS al llamar a la API FFIEC:\n" + err;
+          testOut.textContent =
+            "Error al llamar a /api/ffiec-test:\n" + err;
         }
       });
     </script>

@@ -1,9 +1,12 @@
 from flask import Flask, render_template, request, jsonify
 import math
+import requests
 
 from analisis_datos import run_tract_majority_race, CBSA_TO_MD
 
 app = Flask(__name__)
+
+BASE_URL = "https://ffiec.cfpb.gov/v2/data-browser-api"
 
 # Valores por defecto / opciones de ejemplo
 AVAILABLE_YEARS = [2022, 2023, 2024, 2025]
@@ -104,6 +107,46 @@ def api_run():
 
         traceback.print_exc()
         return jsonify({"success": False, "error": str(e)}), 500
+
+@app.route("/api/ffiec-test", methods=["GET"])
+def ffiec_test():
+    """
+    Prueba de llamada a /view/filers de FFIEC hecha DESDE EL SERVIDOR.
+    El navegador solo ve esta ruta /api/ffiec-test, que es mismo origen.
+    """
+    try:
+        params = {
+            "years": "2023",
+            "msamds": "11244",
+        }
+        url = f"{BASE_URL}/view/filers"
+
+        headers = {
+            "User-Agent": (
+                "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
+                "AppleWebKit/537.36 (KHTML, like Gecko) "
+                "Chrome/124.0.0.0 Safari/537.36"
+            ),
+            "Accept": "application/json,text/plain,*/*",
+        }
+
+        resp = requests.get(url, params=params, headers=headers, timeout=60)
+        resp.raise_for_status()
+        data = resp.json()
+
+        return jsonify({
+            "success": True,
+            "url": resp.url,
+            "status": resp.status_code,
+            "institutions": data.get("institutions", []),
+        })
+
+    except requests.RequestException as e:
+        # Aquí verás si realmente hay un 403, 5xx, etc.
+        return jsonify({
+            "success": False,
+            "error": f"Error al llamar a FFIEC: {str(e)}",
+        }), 500
 
 
 if __name__ == "__main__":
