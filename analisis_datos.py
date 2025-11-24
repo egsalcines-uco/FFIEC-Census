@@ -55,7 +55,7 @@ BASE_URL = "https://ffiec.cfpb.gov/v2/data-browser-api"
 # --- CONFIGURACIÓN DEL PROXY ---
 # ATENCIÓN: Reemplaza con los datos de tu proxy real.
 # Ejemplo de formato: "http://USUARIO:CONTRASEÑA@DIRECCIÓN_IP:PUERTO"
-PROXY_URL = "http://67.43.236.203:209"  # Ejemplo de proxy sin autenticación
+PROXY_URL = "http://133.18.234.13"  # Ejemplo de proxy sin autenticación
 # Si tu proxy usa autenticación:
 # PROXY_URL = "http://miusuario:micontrasena@203.0.113.44:8080" 
 
