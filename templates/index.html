@@ -51,11 +51,12 @@
         display: inline-block;
         width: 140px;
         margin-bottom: 6px;
+        margin-left: 10px;
         font-weight: 600;
       }
 
       select {
-        width: 220px;
+        width: 270px;
         padding: 5px;
         margin-bottom: 20px;
       }
@@ -124,20 +125,7 @@
         text-align: left;
       }
 
-      #result-table th,
-      #result-table td {
-        border: 1px solid #bbb;
-        padding: 4px 8px;
-        font-size: 12px;
-        text-align: right;
-      }
-
-      #result-table th:first-child,
-      #result-table td:first-child {
-        text-align: left;
-      }
-
-      /* Encabezado con color moderno */
+      /* Encabezado con color moderno para la tabla de resultados */
       #result-table thead th {
         background: #dbeafe;
         color: #1e3a8a;
@@ -198,7 +186,7 @@
           </select>
         </div>
 
-        <button id="btn-run">Buscar</button>
+        <button id="btn-run" style="width:100%;">Buscar</button>
 
         <div id="loading" style="display:none">Consultando HMDA...</div>
         <div id="error"></div>
