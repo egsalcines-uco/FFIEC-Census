@@ -53,11 +53,14 @@ from scipy.stats import norm
 BASE_URL = "https://ffiec.cfpb.gov/v2/data-browser-api"
 
 # --- CONFIGURACIÓN DEL PROXY ---
-# ATENCIÓN: Reemplaza con los datos de tu proxy real.
-# Ejemplo de formato: "http://USUARIO:CONTRASEÑA@DIRECCIÓN_IP:PUERTO"
-PROXY_URL = "http://34.140.137.151"  # Ejemplo de proxy sin autenticación
-# Si tu proxy usa autenticación:
-# PROXY_URL = "http://miusuario:micontrasena@203.0.113.44:8080" 
+PROXY_HOST = "brd.superproxy.io"
+PROXY_PORT = "33335"
+PROXY_USER = "brd-customer-hl_b20c707c-zone-ffiec_proxy"
+PROXY_PASS = "kdo6bx34p0if"
+
+# Construcción de la URL de Proxy completa
+#PROXY_URL = f"http://{PROXY_USER}:{PROXY_PASS}@{PROXY_HOST}:{PROXY_PORT}"
+PROXY_URL= "http://213.73.25.230:8080"
 
 proxies = {
     # El proxy a usar para solicitudes HTTP
