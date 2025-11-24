@@ -52,6 +52,19 @@ from scipy.stats import norm
 
 BASE_URL = "https://ffiec.cfpb.gov/v2/data-browser-api"
 
+# --- CONFIGURACIÓN DEL PROXY ---
+# ATENCIÓN: Reemplaza con los datos de tu proxy real.
+# Ejemplo de formato: "http://USUARIO:CONTRASEÑA@DIRECCIÓN_IP:PUERTO"
+PROXY_URL = "http://219.93.101.62"  # Ejemplo de proxy sin autenticación
+# Si tu proxy usa autenticación:
+# PROXY_URL = "http://miusuario:micontrasena@203.0.113.44:8080" 
+
+proxies = {
+    # El proxy a usar para solicitudes HTTP
+    "http": PROXY_URL,
+}
+# ------------------------------
+
 # ---------------------------------------------------------------------------
 # Mapeo CBSA -> lista de Metropolitan Division Codes (MDs)
 # ---------------------------------------------------------------------------
@@ -199,13 +212,7 @@ def download_hmda_csv(
     year: int, msamds: str, actions_taken: str, lei: Optional[str] = None
 ) -> pd.DataFrame:
     """
-    Descarga los LAR HMDA en CSV para un año, uno o varios MSA/MD (separados por comas)
-    y un filtro de acciones.
-    Si se pasa LEI, se filtra solo esa entidad; si no, se descargan todos
-    los lenders de esos MSA/MD.
-
-    NOTA: se añaden cabeceras extra (Referer, Origin, etc.) para intentar evitar
-    bloqueos 403 en algunos entornos (p.ej. Render).
+    Descarga los LAR HMDA en CSV utilizando un proxy para enmascarar la IP del servidor.
     """
     params = {
         "years": str(year),
@@ -217,44 +224,39 @@ def download_hmda_csv(
 
     url = f"{BASE_URL}/view/csv"
 
-    # Simulamos lo máximo posible un navegador real
+    # Se mantienen las cabeceras para seguir simulando un navegador
     headers = {
-        # Mantenemos el User-Agent
         "User-Agent": (
             "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
             "AppleWebKit/537.36 (KHTML, like Gecko) "
             "Chrome/124.0.0.0 Safari/537.36"
         ),
-        # Aceptar específicamente CSV como el formato principal.
-        "Accept": "text/csv, */*; q=0.5", 
-        
-        # ELIMINA Accept-Encoding: si tu script no maneja Gzip
-        # algunos servidores se confunden si se pide Gzip pero el User-Agent no es 100% perfecto.
-        # Es mejor no pedir codificación si no la necesitas.
-        # 'Accept-Encoding': 'gzip, deflate, br', # COMENTAR O QUITAR ESTA LÍNEA
-        
-        # El resto de tus encabezados son buenos para simular la navegación:
+        "Accept": "text/csv, */*; q=0.5",
         "Accept-Language": "en-US,en;q=0.9",
         "Connection": "keep-alive",
         "Origin": "https://ffiec.cfpb.gov",
         "Referer": "https://ffiec.cfpb.gov/data-browser/data",
         "DNT": "1",
-        "Upgrade-Insecure-Requests": "1",
     }
 
-    resp = requests.get(url, params=params, headers=headers, timeout=120)
+    resp = requests.get(
+        url,
+        params=params,
+        headers=headers,
+        proxies=proxies,  # <-- ¡Aquí se añade el proxy!
+        timeout=120
+    )
+    
     try:
         resp.raise_for_status()
     except requests.HTTPError as e:
-        # Log más detallado para depurar en Render
-        print("Error llamando a /view/csv:", e, file=sys.stderr)
-        print("URL efectiva:", resp.url, file=sys.stderr)
+        print("Error llamando a /view/csv (Con Proxy):", e, file=sys.stderr)
         print("Status code:", resp.status_code, file=sys.stderr)
-        print("Cabeceras de respuesta:", resp.headers, file=sys.stderr)
-        print("Texto de respuesta (inicio):", resp.text[:500], file=sys.stderr)
+        # El resto de tu logging (URL efectiva, cabeceras)
         raise
 
     csv_bytes = resp.content
+    # Asegúrate de que pandas.read_csv puede manejar el contenido si está comprimido (aunque quitamos Accept-Encoding)
     df = pd.read_csv(io.BytesIO(csv_bytes))
     return df
 
