@@ -55,7 +55,7 @@
       }
 
       select {
-        width: 250px;
+        width: 220px;
         padding: 5px;
         margin-bottom: 20px;
       }
@@ -67,13 +67,8 @@
         border: none;
         border-radius: 6px;
         cursor: pointer;
-        margin-top: 30px;
+        margin-top: 12px;
         font-size: 14px;
-
-        /* 🔵 CENTRAR EL BOTÓN */
-        display: block;
-        margin-left: auto;
-        margin-right: auto;
       }
 
       button:hover {
@@ -129,19 +124,32 @@
         text-align: left;
       }
 
+      #result-table th,
+      #result-table td {
+        border: 1px solid #bbb;
+        padding: 4px 8px;
+        font-size: 12px;
+        text-align: right;
+      }
+
+      #result-table th:first-child,
+      #result-table td:first-child {
+        text-align: left;
+      }
+
+      /* Encabezado con color moderno */
       #result-table thead th {
         background: #dbeafe;
         color: #1e3a8a;
         font-weight: 700;
       }
 
-      /* Texto pequeño debajo de Actions */
-      .actions-note {
-        font-size: 11px;
+      /* Salida de prueba FFIEC */
+      #ffiec-test-output {
+        margin-top: 8px;
+        font-size: 12px;
+        white-space: pre-wrap;
         color: #444;
-        margin-top: -16px;
-        margin-left: 142px; /* alineado con el select */
-        margin-bottom: 12px;
       }
     </style>
   </head>
@@ -190,18 +198,15 @@
           </select>
         </div>
 
-        <!-- 🔵 SIGNIFICADO DE 1–2–3 -->
-        <div class="actions-note">
-          <strong>1</strong> = Originated &nbsp;&nbsp;
-          <strong>2</strong> = Approved Not Accepted &nbsp;&nbsp; <br>
-          <strong>3</strong> = Denied
-        </div>
-
-        <!-- 🔵 BOTÓN CENTRADO -->
         <button id="btn-run">Buscar</button>
 
         <div id="loading" style="display:none">Consultando HMDA...</div>
         <div id="error"></div>
+
+        <!-- Botón de prueba directa a la API FFIEC -->
+        <hr style="margin:16px 0;" />
+        <button id="btn-test-ffiec" style="width:100%;">Probar API FFIEC (view/filers)</button>
+        <div id="ffiec-test-output"></div>
       </div>
 
       <!-- PANEL DERECHO MÁS ANCHO -->
@@ -272,7 +277,7 @@
         tb.appendChild(tr);
       });
 
-      // === Lógica API ===
+      // === Lógica API backend (tu /api/run) ===
       const btnRun = document.getElementById("btn-run");
       const loadingEl = document.getElementById("loading");
       const errorEl = document.getElementById("error");
@@ -296,16 +301,26 @@
             body: JSON.stringify({ year, msamd, lender_name, actions_taken }),
           });
 
-          const data = await resp.json();
+          const data = await resp.json().catch(() => null);
           loadingEl.style.display = "none";
 
+          if (!data) {
+            errorEl.textContent = "Error inesperado en la llamada a la API (JSON inválido).";
+            return;
+          }
+
           if (!data.success) {
-            errorEl.textContent = data.error || "Error inesperado.";
+            errorEl.textContent = data.error || "Error inesperado en la llamada a la API.";
             return;
           }
 
           const cols = data.columns;
           const rows = data.rows;
+
+          if (!cols || !rows) {
+            errorEl.textContent = "Respuesta de la API sin columnas o filas.";
+            return;
+          }
 
           let thead = "<thead><tr>";
           cols.forEach(c => thead += `<th>${c}</th>`);
@@ -329,6 +344,37 @@
           loadingEl.style.display = "none";
           errorEl.textContent = "Error inesperado en la llamada a la API.";
           console.error(e);
+        }
+      });
+
+      // === Botón de prueba directa a la API FFIEC ===
+      const btnTest = document.getElementById("btn-test-ffiec");
+      const testOut = document.getElementById("ffiec-test-output");
+
+      btnTest.addEventListener("click", async () => {
+        testOut.textContent = "Llamando a FFIEC /view/filers...";
+        const testUrl = "https://ffiec.cfpb.gov/v2/data-browser-api/view/filers?years=2023&msamds=11244";
+
+        try {
+          const resp = await fetch(testUrl);
+          testOut.textContent = `Status: ${resp.status} ${resp.statusText}\nURL: ${testUrl}\n`;
+
+          if (!resp.ok) {
+            testOut.textContent += "La respuesta no es OK (puede ser 403/404/etc).";
+            return;
+          }
+
+          const json = await resp.json();
+          const n = (json && Array.isArray(json.institutions)) ? json.institutions.length : 0;
+          testOut.textContent += `\nInstitutions devueltas: ${n}\n\nPrimeros nombres:\n`;
+          if (n > 0) {
+            json.institutions.slice(0, 5).forEach((inst, i) => {
+              testOut.textContent += `${i+1}. ${inst.name} (LEI: ${inst.lei})\n`;
+            });
+          }
+        } catch (err) {
+          console.error(err);
+          testOut.textContent = "Error de red o CORS al llamar a la API FFIEC:\n" + err;
         }
       });
     </script>
