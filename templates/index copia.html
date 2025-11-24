@@ -1,0 +1,327 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <title>HMDA Tract Majority Race</title>
+
+    <style>
+      body {
+        font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
+          sans-serif;
+        margin: 0;
+        background: #f5f7fa;
+      }
+
+      /* Barra superior color moderno (azul SaaS) */
+      header {
+        background: #2563eb;
+        color: white;
+        padding: 16px 24px;
+        font-size: 20px;
+        margin-bottom: 20px;
+        font-weight: 600;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.15);
+      }
+
+      .container {
+        display: flex;
+        gap: 25px;
+        padding: 20px;
+      }
+
+      /* Panel general */
+      .panel {
+        background: white;
+        padding: 20px;
+        border-radius: 10px;
+        box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+      }
+
+      /* Panel izquierdo más estrecho */
+      .panel-left {
+        flex: 0.35;
+      }
+
+      /* Panel derecho más ancho */
+      .panel-right {
+        flex: 0.65;
+      }
+
+      label {
+        display: inline-block;
+        width: 140px;
+        margin-bottom: 6px;
+        font-weight: 600;
+      }
+
+      select {
+        width: 220px;
+        padding: 5px;
+      }
+
+      button {
+        background: #2563eb;
+        color: white;
+        padding: 10px 16px;
+        border: none;
+        border-radius: 6px;
+        cursor: pointer;
+        margin-top: 12px;
+        font-size: 14px;
+      }
+
+      button:hover {
+        background: #1e4fcf;
+      }
+
+      #result-table {
+        margin-top: 20px;
+        border-collapse: collapse;
+        width: 100%;
+      }
+
+      #result-table th,
+      #result-table td {
+        border: 1px solid #bbb;
+        padding: 4px 8px;
+        font-size: 12px;
+        text-align: right;
+      }
+
+      #result-table th:first-child,
+      #result-table td:first-child {
+        text-align: left;
+      }
+
+      #error {
+        margin-top: 10px;
+        color: red;
+        font-weight: 600;
+      }
+
+      #loading {
+        margin-top: 10px;
+        color: #555;
+      }
+
+      /* Tabla CBSA */
+      .cbsa-table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-top: 10px;
+        font-size: 13px;
+      }
+
+      .cbsa-table th, .cbsa-table td {
+        border: 1px solid #ccc;
+        padding: 6px;
+      }
+
+      .cbsa-table th {
+        background: #e1eaff;
+        font-weight: 700;
+        text-align: left;
+      }
+
+      #result-table th,
+        #result-table td {
+            border: 1px solid #bbb;
+            padding: 4px 8px;
+            font-size: 12px;
+            text-align: right;
+        }
+
+        #result-table th:first-child,
+        #result-table td:first-child {
+            text-align: left;
+        }
+
+        /* 💡 Nuevo: encabezado con color moderno */
+        #result-table thead th {
+            background: #dbeafe;
+            color: #1e3a8a;
+            font-weight: 700;
+        }
+    </style>
+  </head>
+
+  <body>
+    <header>HMDA — Tract Majority Race Dashboard</header>
+
+    <div class="container">
+      <!-- PANEL IZQUIERDO MÁS ESTRECHO -->
+      <div class="panel panel-left">
+        <h3>Parámetros de consulta</h3>
+
+        <div>
+          <label for="year">Year:</label>
+          <select id="year">
+            {% for y in years %}
+            <option value="{{ y }}">{{ y }}</option>
+            {% endfor %}
+          </select>
+        </div>
+
+        <div>
+          <label for="msamd">MSA/MD / CBSA:</label>
+          <select id="msamd">
+            {% for m in msamds %}
+            <option value="{{ m }}">{{ m }}</option>
+            {% endfor %}
+          </select>
+        </div>
+
+        <div>
+          <label for="lender_name">Lender:</label>
+          <select id="lender_name">
+            {% for l in lenders %}
+            <option value="{{ l }}">{{ l }}</option>
+            {% endfor %}
+          </select>
+        </div>
+
+        <div>
+          <label for="actions_taken">Actions:</label>
+          <select id="actions_taken">
+            {% for a in actions_list %}
+            <option value="{{ a }}">{{ a }}</option>
+            {% endfor %}
+          </select>
+        </div>
+
+        <button id="btn-run">Buscar</button>
+
+        <div id="loading" style="display:none">Consultando HMDA...</div>
+        <div id="error"></div>
+      </div>
+
+      <!-- PANEL DERECHO MÁS ANCHO -->
+      <div class="panel panel-right">
+        <h3>CBSA con múltiples Metropolitan Divisions</h3>
+
+        <table class="cbsa-table">
+          <thead>
+            <tr>
+              <th>CBSA</th>
+              <th>Descripción</th>
+              <th>MD Codes</th>
+            </tr>
+          </thead>
+          <tbody id="cbsa-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- TABLA DE RESULTADOS -->
+    <div class="panel" style="margin: 20px">
+      <table id="result-table" style="display:none"></table>
+    </div>
+
+    <script>
+      /* === CBSA → MD === */
+      const CBSA_TO_MD = {
+        "12060": ["12054", "31924"],
+        "14460": ["14454", "15764", "40484"],
+        "16980": ["16984", "20994", "29404", "29414"],
+        "19100": ["19124", "23104"],
+        "19820": ["19804", "47664"],
+        "31080": ["11244", "31084"],
+        "33100": ["22744", "33124", "48424"],
+        "35620": ["29484", "35004", "35084", "35614"],
+        "37980": ["15804", "33874", "37964", "48864"],
+        "41860": ["36084", "41884", "42034"],
+        "42660": ["21794", "42644", "45104"],
+        "45300": ["41304", "45294"],
+        "47900": ["11694", "23224", "47764"],
+      };
+
+      const CBSA_DESCRIPTIONS = {
+        "12060": "Atlanta–Sandy Springs–Alpharetta, GA",
+        "14460": "Boston–Cambridge–Newton, MA–NH",
+        "16980": "Chicago–Naperville–Elgin, IL–IN–WI",
+        "19100": "Dallas–Fort Worth–Arlington, TX",
+        "19820": "Detroit–Warren–Dearborn, MI",
+        "31080": "Los Angeles–Long Beach–Anaheim, CA",
+        "33100": "Miami–Fort Lauderdale–West Palm Beach, FL",
+        "35620": "New York–Newark–Jersey City, NY–NJ–PA",
+        "37980": "Philadelphia–Camden–Wilmington, PA–NJ–DE–MD",
+        "41860": "San Francisco–Oakland–Berkeley, CA",
+        "42660": "Seattle–Tacoma–Bellevue, WA",
+        "45300": "Tampa–St. Petersburg–Clearwater, FL",
+        "47900": "Washington–Arlington–Alexandria, DC–VA–MD–WV",
+      };
+
+      // Rellenar tabla CBSA
+      const tb = document.getElementById("cbsa-tbody");
+      Object.keys(CBSA_TO_MD).forEach((cbsa) => {
+        const tr = document.createElement("tr");
+        tr.innerHTML = `
+          <td>${cbsa}</td>
+          <td>${CBSA_DESCRIPTIONS[cbsa] || "(sin descripción)"}</td>
+          <td>${CBSA_TO_MD[cbsa].join(", ")}</td>
+        `;
+        tb.appendChild(tr);
+      });
+
+      // === Lógica API ===
+      const btnRun = document.getElementById("btn-run");
+      const loadingEl = document.getElementById("loading");
+      const errorEl = document.getElementById("error");
+      const tableEl = document.getElementById("result-table");
+
+      btnRun.addEventListener("click", async () => {
+        const year = document.getElementById("year").value;
+        const msamd = document.getElementById("msamd").value;
+        const lender_name = document.getElementById("lender_name").value;
+        const actions_taken = document.getElementById("actions_taken").value;
+
+        errorEl.textContent = "";
+        tableEl.style.display = "none";
+        tableEl.innerHTML = "";
+        loadingEl.style.display = "block";
+
+        try {
+          const resp = await fetch("/api/run", {
+            method: "POST",
+            headers: {"Content-Type": "application/json"},
+            body: JSON.stringify({ year, msamd, lender_name, actions_taken }),
+          });
+
+          const data = await resp.json();
+          loadingEl.style.display = "none";
+
+          if (!data.success) {
+            errorEl.textContent = data.error || "Error inesperado.";
+            return;
+          }
+
+          const cols = data.columns;
+          const rows = data.rows;
+
+          let thead = "<thead><tr>";
+          cols.forEach(c => thead += `<th>${c}</th>`);
+          thead += "</tr></thead>";
+
+          let tbody = "<tbody>";
+          rows.forEach(r => {
+            tbody += "<tr>";
+            cols.forEach(c => {
+              let v = r[c] ?? "";
+              tbody += `<td>${v}</td>`;
+            });
+            tbody += "</tr>";
+          });
+          tbody += "</tbody>";
+
+          tableEl.innerHTML = thead + tbody;
+          tableEl.style.display = "table";
+
+        } catch (e) {
+          loadingEl.style.display = "none";
+          errorEl.textContent = "Error inesperado en la llamada a la API.";
+          console.error(e);
+        }
+      });
+    </script>
+  </body>
+</html>

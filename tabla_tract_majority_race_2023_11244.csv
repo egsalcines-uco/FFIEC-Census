@@ -1,0 +1,6 @@
+Tract Majority Race,2023 # Tracts,Lender Apps,Lender % of TTL,Peers Apps,Peers % of TTL,Difference,z-statistic,p-value,Statistically Significant?,Gap
+No Population,614,581,100.0,45685,99.69448990725587,0.30551009274412877,1.3343106066324313,0.1821020829317943,No,-2
+Unknown Tract / Not in Demo,0,0,0.0,140,0.3055100927441353,-0.3055100927441353,-1.3343106066324508,0.18210208293178787,No,2
+Total,614,581,100.0,45825,100.0,0.0,,,No,0
+Majority Minority Tracts,0,0,0.0,0,0.0,0.0,,,No,0
+Majority Black/Hisp. Tracts,0,0,0.0,0,0.0,0.0,,,No,0
