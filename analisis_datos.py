@@ -219,15 +219,23 @@ def download_hmda_csv(
 
     # Simulamos lo máximo posible un navegador real
     headers = {
+        # Mantenemos el User-Agent
         "User-Agent": (
             "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
             "AppleWebKit/537.36 (KHTML, like Gecko) "
             "Chrome/124.0.0.0 Safari/537.36"
         ),
-        "Accept": "text/csv,application/json;q=0.9,*/*;q=0.8",
+        # Aceptar específicamente CSV como el formato principal.
+        "Accept": "text/csv, */*; q=0.5", 
+        
+        # ELIMINA Accept-Encoding: si tu script no maneja Gzip
+        # algunos servidores se confunden si se pide Gzip pero el User-Agent no es 100% perfecto.
+        # Es mejor no pedir codificación si no la necesitas.
+        # 'Accept-Encoding': 'gzip, deflate, br', # COMENTAR O QUITAR ESTA LÍNEA
+        
+        # El resto de tus encabezados son buenos para simular la navegación:
         "Accept-Language": "en-US,en;q=0.9",
         "Connection": "keep-alive",
-        # Cabeceras típicas que puede esperar el WAF
         "Origin": "https://ffiec.cfpb.gov",
         "Referer": "https://ffiec.cfpb.gov/data-browser/data",
         "DNT": "1",
