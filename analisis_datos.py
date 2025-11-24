@@ -203,6 +203,9 @@ def download_hmda_csv(
     y un filtro de acciones.
     Si se pasa LEI, se filtra solo esa entidad; si no, se descargan todos
     los lenders de esos MSA/MD.
+
+    NOTA: se añaden cabeceras extra (Referer, Origin, etc.) para intentar evitar
+    bloqueos 403 en algunos entornos (p.ej. Render).
     """
     params = {
         "years": str(year),
@@ -214,29 +217,32 @@ def download_hmda_csv(
 
     url = f"{BASE_URL}/view/csv"
 
-    # Cabeceras más "parecidas" a un navegador real usando el data-browser
+    # Simulamos lo máximo posible un navegador real
     headers = {
         "User-Agent": (
             "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
             "AppleWebKit/537.36 (KHTML, like Gecko) "
             "Chrome/124.0.0.0 Safari/537.36"
         ),
-        # Acepta CSV y cualquier cosa, como haría un navegador
-        "Accept": "text/csv,application/json,text/plain,*/*",
+        "Accept": "text/csv,application/json;q=0.9,*/*;q=0.8",
         "Accept-Language": "en-US,en;q=0.9",
         "Connection": "keep-alive",
-        # Muy importante: simular que venimos de la propia web de FFIEC
+        # Cabeceras típicas que puede esperar el WAF
         "Origin": "https://ffiec.cfpb.gov",
-        "Referer": f"https://ffiec.cfpb.gov/data-browser/data/{year}?category=msamds&msamds={msamds}",
+        "Referer": "https://ffiec.cfpb.gov/data-browser/data",
+        "DNT": "1",
+        "Upgrade-Insecure-Requests": "1",
     }
 
     resp = requests.get(url, params=params, headers=headers, timeout=120)
     try:
         resp.raise_for_status()
     except requests.HTTPError as e:
+        # Log más detallado para depurar en Render
         print("Error llamando a /view/csv:", e, file=sys.stderr)
         print("URL efectiva:", resp.url, file=sys.stderr)
         print("Status code:", resp.status_code, file=sys.stderr)
+        print("Cabeceras de respuesta:", resp.headers, file=sys.stderr)
         print("Texto de respuesta (inicio):", resp.text[:500], file=sys.stderr)
         raise
 
