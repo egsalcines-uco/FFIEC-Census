@@ -214,15 +214,20 @@ def download_hmda_csv(
 
     url = f"{BASE_URL}/view/csv"
 
+    # Cabeceras más "parecidas" a un navegador real usando el data-browser
     headers = {
         "User-Agent": (
             "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
             "AppleWebKit/537.36 (KHTML, like Gecko) "
             "Chrome/124.0.0.0 Safari/537.36"
         ),
-        "Accept": "text/csv,application/octet-stream,*/*",
+        # Acepta CSV y cualquier cosa, como haría un navegador
+        "Accept": "text/csv,application/json,text/plain,*/*",
         "Accept-Language": "en-US,en;q=0.9",
         "Connection": "keep-alive",
+        # Muy importante: simular que venimos de la propia web de FFIEC
+        "Origin": "https://ffiec.cfpb.gov",
+        "Referer": f"https://ffiec.cfpb.gov/data-browser/data/{year}?category=msamds&msamds={msamds}",
     }
 
     resp = requests.get(url, params=params, headers=headers, timeout=120)
